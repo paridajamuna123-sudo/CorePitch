@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: corepitch
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: PORT
+        value: 10000
+      - key: AiSettings__ApiKey
+        sync: false
+      - key: SmtpSettings__SenderEmail
+        value: paridarajesh265@gmail.com
+      - key: SmtpSettings__SenderName
+        value: Rajesh Parida
+      - key: SmtpSettings__Username
+        value: paridarajesh265@gmail.com
+      - key: SmtpSettings__Password
+        sync: false

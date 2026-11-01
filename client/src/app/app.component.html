@@ -1,0 +1,633 @@
+<div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" (paste)="onPaste($event)">
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-bold text-slate-950 text-xl shadow-lg shadow-emerald-500/20">
+          CP
+        </div>
+        <div>
+          <span class="text-xl font-black tracking-tight text-white">CorePitch</span>
+          <span class="text-xs px-2 py-0.5 ml-2 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium">Vision OCR + Outbox</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex space-x-1 sm:space-x-2 bg-slate-950 p-1 rounded-xl border border-slate-800 text-sm">
+        <button 
+          (click)="setTab('workspace')" 
+          [class]="activeTab() === 'workspace' 
+            ? 'bg-slate-800 text-white shadow-sm font-semibold' 
+            : 'text-slate-400 hover:text-slate-200'"
+          class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2">
+          <span>⚡</span>
+          <span>Fast Apply Workspace</span>
+        </button>
+        <button 
+          (click)="setTab('resumes')" 
+          [class]="activeTab() === 'resumes' 
+            ? 'bg-slate-800 text-white shadow-sm font-semibold' 
+            : 'text-slate-400 hover:text-slate-200'"
+          class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2">
+          <span>📄</span>
+          <span>Resumes & Profile</span>
+        </button>
+        <button 
+          (click)="setTab('history')" 
+          [class]="activeTab() === 'history' 
+            ? 'bg-slate-800 text-white shadow-sm font-semibold' 
+            : 'text-slate-400 hover:text-slate-200'"
+          class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2">
+          <span>📬</span>
+          <span>Outbox & History</span>
+          <span *ngIf="applications().length > 0" class="ml-1 px-1.5 py-0.2 text-xs bg-slate-700 text-slate-200 rounded-full font-mono">
+            {{ applications().length }}
+          </span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Global Action / Feedback Alert -->
+  <div *ngIf="actionMessage()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+    <div [class]="actionMessage()?.type === 'success' ? 'bg-emerald-950/80 border-emerald-600 text-emerald-200' : 'bg-rose-950/80 border-rose-600 text-rose-200'"
+         class="p-4 rounded-xl border flex items-center justify-between text-sm shadow-lg">
+      <div class="flex items-center space-x-3">
+        <span class="text-lg">{{ actionMessage()?.type === 'success' ? '✓' : '⚠' }}</span>
+        <span>{{ actionMessage()?.text }}</span>
+      </div>
+      <button (click)="clearAlert()" class="text-xs uppercase hover:underline opacity-70">Dismiss</button>
+    </div>
+  </div>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+
+    <!-- ======================================================== -->
+    <!-- TAB 1: Fast Apply Workspace (Guided 4-Section Flow)       -->
+    <!-- ======================================================== -->
+    <div *ngIf="activeTab() === 'workspace'" class="space-y-6">
+
+      <!-- SECTION 1: Screenshot Paste / Upload Dropzone -->
+      <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur">
+        <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center space-x-2">
+              <span class="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono">1</span>
+              <span>Job Post Screenshot Capture</span>
+            </h2>
+            <p class="text-xs text-slate-400">Press <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-200 font-mono text-[11px]">Ctrl + V</kbd> anywhere or drag & drop a LinkedIn / WhatsApp hiring banner</p>
+          </div>
+          <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-800 text-emerald-400 border border-slate-700 flex items-center space-x-1">
+            <span>✨</span>
+            <span>Gemini Multimodal OCR</span>
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+          <!-- Dropzone Box -->
+          <div 
+            (drop)="onImageDrop($event)" 
+            (dragover)="onDragOver($event)"
+            class="md:col-span-8 border-2 border-dashed border-slate-700 hover:border-emerald-500 bg-slate-950/60 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition relative group">
+            <input 
+              type="file" 
+              accept="image/*" 
+              (change)="onImageFileSelected($event)" 
+              class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+            
+            <div class="w-12 h-12 rounded-xl bg-slate-800/80 flex items-center justify-center text-2xl mb-2 text-emerald-400 group-hover:scale-110 transition">
+              📋
+            </div>
+            <p class="text-sm font-semibold text-slate-200">
+              Paste screenshot from clipboard (<kbd class="text-xs bg-slate-800 px-1 py-0.5 rounded">Ctrl+V</kbd>) or click to browse
+            </p>
+            <p class="text-xs text-slate-500 mt-1">Supports PNG, JPG, or WEBP job announcements & hiring banners</p>
+            
+            <div *ngIf="isExtractingImage()" class="absolute inset-0 bg-slate-950/90 rounded-2xl flex flex-col items-center justify-center space-y-2 z-10 backdrop-blur-sm">
+              <svg class="animate-spin h-8 w-8 text-emerald-500" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <span class="text-xs text-emerald-300 font-mono">Analyzing image & extracting hiring details...</span>
+            </div>
+          </div>
+
+          <!-- Thumbnail Preview Box -->
+          <div class="md:col-span-4 flex flex-col items-center justify-center p-3 bg-slate-950 border border-slate-800 rounded-2xl h-44">
+            <div *ngIf="screenshotPreviewUrl()" class="w-full h-full flex flex-col items-center justify-center relative">
+              <img [src]="screenshotPreviewUrl()" alt="Job Banner Preview" class="max-h-36 max-w-full rounded-lg object-contain shadow-md" />
+              <span class="text-[10px] text-slate-400 mt-1 font-mono">Uploaded Screenshot</span>
+            </div>
+            <div *ngIf="!screenshotPreviewUrl()" class="text-center text-slate-600 text-xs">
+              <span class="block text-2xl mb-1">🖼️</span>
+              <span>No image captured yet</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2 & 3 SPLIT LAYOUT -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- SECTION 2: Verify Extracted Details Form (Left Column) -->
+        <section class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur">
+          <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center space-x-2">
+                <span class="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono">2</span>
+                <span>Verify Extracted Details</span>
+              </h2>
+              <p class="text-xs text-slate-400">Review & correct parsed information before dispatch</p>
+            </div>
+            <span class="text-[11px] font-semibold uppercase px-2.5 py-1 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+              Verify Details
+            </span>
+          </div>
+
+          <!-- Multiple Detected Roles Selector Chips -->
+          <div *ngIf="detectedRolesList().length > 1" class="mb-4 p-3 bg-slate-950 border border-slate-800 rounded-xl">
+            <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-2">Multiple Roles Detected on Banner — Click to Select:</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button 
+                *ngFor="let role of detectedRolesList()" 
+                type="button" 
+                (click)="selectRole(role)"
+                [class]="applyForm.get('jobTitle')?.value === role ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-600'"
+                class="px-2.5 py-1 rounded-lg text-xs font-medium border transition flex items-center space-x-1">
+                <span *ngIf="applyForm.get('jobTitle')?.value === role">✓</span>
+                <span>{{ role }}</span>
+              </button>
+            </div>
+          </div>
+
+          <form [formGroup]="applyForm" class="space-y-3.5 text-xs">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-medium text-slate-300 mb-1">Company Name *</label>
+                <input 
+                  type="text" 
+                  formControlName="companyName" 
+                  placeholder="e.g. Acme Corp"
+                  class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-white outline-none transition" />
+              </div>
+              <div>
+                <label class="block font-medium text-slate-300 mb-1">Target Job Title *</label>
+                <input 
+                  type="text" 
+                  formControlName="jobTitle" 
+                  placeholder="e.g. Senior .NET Engineer"
+                  class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-white outline-none transition font-semibold" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-medium text-slate-300 mb-1">Recruiter / Contact Name</label>
+                <input 
+                  type="text" 
+                  formControlName="recruiterName" 
+                  placeholder="e.g. Sarah Miller"
+                  class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-white outline-none transition" />
+              </div>
+              <div>
+                <label class="block font-medium text-slate-300 mb-1">Recruiter Email *</label>
+                <input 
+                  type="email" 
+                  formControlName="recruiterEmail" 
+                  placeholder="recruiter@company.com"
+                  class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-white outline-none transition font-mono" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-medium text-slate-300 mb-1">Experience Required</label>
+                <input 
+                  type="text" 
+                  formControlName="experienceRequired" 
+                  placeholder="e.g. 5+ years"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-300 outline-none" />
+              </div>
+              <div>
+                <label class="block font-medium text-slate-300 mb-1">Location</label>
+                <input 
+                  type="text" 
+                  formControlName="location" 
+                  placeholder="e.g. Remote / Bengaluru"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-300 outline-none" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-medium text-slate-300 mb-1">Extracted Key Skills</label>
+              <input 
+                type="text" 
+                formControlName="extractedSkills" 
+                placeholder="e.g. .NET 8, C#, Angular, SQL Server"
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-300 outline-none font-mono text-[11px]" />
+            </div>
+
+            <div class="pt-2 flex items-center justify-between">
+              <button 
+                type="button" 
+                (click)="onRegenerateDraft()"
+                [disabled]="isGenerating()"
+                class="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-semibold rounded-xl text-xs transition flex items-center space-x-1.5 border border-slate-700">
+                <span>🔄</span>
+                <span>{{ isGenerating() ? 'Regenerating...' : 'Regenerate Email from Verified Details' }}</span>
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- SECTION 3: Cold Email Editor & Resume Attachment Box (Right Column) -->
+        <section class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur flex flex-col space-y-4">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center space-x-2">
+                <span class="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono">3</span>
+                <span>Cold Email & Resume Attachment</span>
+              </h2>
+              <p class="text-xs text-slate-400">Tailored message and PDF resume attachment</p>
+            </div>
+          </div>
+
+          <!-- Duplicate Recruiter Warning Banner -->
+          <div *ngIf="draft()?.isDuplicateWarning" class="bg-amber-950/80 border border-amber-500/80 text-amber-200 px-3.5 py-2.5 rounded-xl flex items-start space-x-2.5 text-xs">
+            <span class="text-base text-amber-400 font-bold">⚠️</span>
+            <div>
+              <span class="font-bold block">Duplicate Outreach Warning:</span>
+              {{ draft()?.duplicateWarningMessage }}
+            </div>
+          </div>
+
+          <!-- Subject Line -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Email Subject Line</label>
+            <input 
+              type="text" 
+              [ngModel]="editableSubject()" 
+              (ngModelChange)="editableSubject.set($event)"
+              placeholder="Application: Role - Candidate Name"
+              class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-white font-medium text-xs outline-none" />
+          </div>
+
+          <!-- HTML Body Editor -->
+          <div class="flex-1 flex flex-col">
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Email HTML Body (Editable)</label>
+              <span class="text-[11px] text-slate-500 font-mono">HTML formatting enabled</span>
+            </div>
+            <textarea 
+              rows="8"
+              [ngModel]="editableBodyHtml()" 
+              (ngModelChange)="editableBodyHtml.set($event)"
+              placeholder="Email pitch will generate here..."
+              class="w-full flex-1 bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-lg p-3 text-slate-200 text-xs font-mono leading-relaxed outline-none"></textarea>
+          </div>
+
+          <!-- Resume Attachment Box -->
+          <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+                <span>📎</span>
+                <span>Attached Resume PDF</span>
+              </span>
+              <div class="flex space-x-2 text-[11px]">
+                <button 
+                  type="button" 
+                  (click)="resumeMode.set('saved')"
+                  [class]="resumeMode() === 'saved' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400'"
+                  class="px-2 py-0.5 rounded transition">
+                  From Saved Resumes
+                </button>
+                <button 
+                  type="button" 
+                  (click)="resumeMode.set('custom')"
+                  [class]="resumeMode() === 'custom' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400'"
+                  class="px-2 py-0.5 rounded transition">
+                  Upload Fresh PDF
+                </button>
+              </div>
+            </div>
+
+            <!-- Mode 1: Saved Resumes Dropdown -->
+            <div *ngIf="resumeMode() === 'saved'">
+              <select 
+                [formControl]="$any(applyForm.get('resumeDocumentId'))"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-lg px-3 py-1.5 text-xs text-white outline-none">
+                <option value="" disabled>-- Select a saved resume --</option>
+                <option *ngFor="let r of resumes()" [value]="r.id">
+                  {{ r.versionName }} ({{ r.displayFileName }}) {{ r.isDefault ? '★ Default' : '' }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Mode 2: Fresh Custom PDF File Upload -->
+            <div *ngIf="resumeMode() === 'custom'" class="space-y-2">
+              <input 
+                type="file" 
+                accept=".pdf"
+                (change)="onCustomResumeSelected($event)"
+                class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700" />
+              <div *ngIf="customResumeFileName()" class="text-[11px] text-emerald-400 font-mono">
+                Selected: {{ customResumeFileName() }} ({{ customResumeFileSize() }})
+              </div>
+            </div>
+          </div>
+
+          <!-- PRIMARY ACTION: Open Pre-Flight Preview Modal -->
+          <button 
+            type="button" 
+            (click)="openPreFlightModal()"
+            class="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-950 transition flex items-center justify-center space-x-2 text-sm">
+            <span>🔍 Preview Application & Confirm</span>
+          </button>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- SECTION 4: PRE-FLIGHT REVIEW MODAL ("Review Before Sending") -->
+    <!-- ======================================================== -->
+    <div *ngIf="showPreviewModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 animate-in fade-in duration-200">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center space-x-2">
+              <span>✈️ Pre-Flight Application Review</span>
+            </h3>
+            <p class="text-xs text-slate-400">Review all dispatch details before committing to the Outbox</p>
+          </div>
+          <button (click)="closePreFlightModal()" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+        </div>
+
+        <!-- Meta Summary Box -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2 text-xs">
+          <div class="flex justify-between items-center py-1 border-b border-slate-900">
+            <span class="text-slate-400 font-medium">From:</span>
+            <span class="text-slate-200 font-mono font-semibold">
+              Rajesh Parida &lt;paridarajesh265&#64;gmail.com&gt;
+            </span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-900">
+            <span class="text-slate-400 font-medium">To:</span>
+            <span class="text-emerald-400 font-mono font-semibold">
+              {{ applyForm.get('recruiterName')?.value ? applyForm.get('recruiterName')?.value + ' <' + applyForm.get('recruiterEmail')?.value + '>' : applyForm.get('recruiterEmail')?.value }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-900">
+            <span class="text-slate-400 font-medium">Company & Role:</span>
+            <span class="text-white font-semibold">
+              {{ applyForm.get('companyName')?.value }} — {{ applyForm.get('jobTitle')?.value }}
+              <span *ngIf="applyForm.get('location')?.value" class="text-slate-400">({{ applyForm.get('location')?.value }})</span>
+            </span>
+          </div>
+          <div class="flex justify-between items-center py-1">
+            <span class="text-slate-400 font-medium">Subject Line:</span>
+            <span class="text-slate-200 font-semibold truncate max-w-md">{{ editableSubject() }}</span>
+          </div>
+        </div>
+
+        <!-- Rendered Email Body Box -->
+        <div>
+          <span class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block mb-1">
+            Rendered Email Body (Recruiter View):
+          </span>
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-slate-200 leading-relaxed max-h-56 overflow-y-auto">
+            <div [innerHTML]="editableBodyHtml()"></div>
+          </div>
+        </div>
+
+        <!-- Attached Resume Pill & Preview -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-2">
+            <span class="text-base text-emerald-400">📎</span>
+            <div>
+              <span class="font-medium text-slate-300 block">Attached Resume:</span>
+              <span class="text-slate-400 font-mono text-[11px]">{{ getActiveAttachedResumeName() }}</span>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            (click)="previewAttachedPdf()" 
+            class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold transition border border-slate-700">
+            Preview PDF
+          </button>
+        </div>
+
+        <!-- Confirmation Actions -->
+        <div class="flex items-center justify-end space-x-3 pt-2 border-t border-slate-800">
+          <button 
+            type="button" 
+            (click)="closePreFlightModal()"
+            class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition">
+            Back to Edit
+          </button>
+          <button 
+            type="button" 
+            (click)="confirmAndDispatch()"
+            [disabled]="isQueueing()"
+            class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-950 transition flex items-center space-x-2">
+            <span *ngIf="!isQueueing()">🚀 Confirm & Send to Recruiter</span>
+            <span *ngIf="isQueueing()">Queueing into Outbox...</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 2: Resume & Profile Manager                          -->
+    <!-- ======================================================== -->
+    <div *ngIf="activeTab() === 'resumes'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <section class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <h2 class="text-lg font-bold text-white mb-2">📄 PDF Resumes</h2>
+        <p class="text-xs text-slate-400 mb-5">Upload role-specific resumes to attach automatically to outbound emails</p>
+
+        <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl mb-6 space-y-3">
+          <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Upload New PDF Resume</h3>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Version Name *</label>
+            <input 
+              type="text" 
+              [ngModel]="uploadVersionName()" 
+              (ngModelChange)="uploadVersionName.set($event)"
+              placeholder="e.g. Full-Stack .NET + Angular"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Select PDF File *</label>
+            <input 
+              type="file" 
+              accept=".pdf"
+              (change)="onFileSelected($event)"
+              class="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700" />
+          </div>
+          <div class="flex items-center space-x-2">
+            <input 
+              type="checkbox" 
+              id="isDefaultCheck"
+              [ngModel]="uploadIsDefault()" 
+              (ngModelChange)="uploadIsDefault.set($event)"
+              class="rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0" />
+            <label for="isDefaultCheck" class="text-xs text-slate-300">Set as default resume</label>
+          </div>
+          <button 
+            type="button" 
+            (click)="onUploadResume()" 
+            [disabled]="isUploadingResume()"
+            class="w-full py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-semibold rounded-lg text-xs transition">
+            {{ isUploadingResume() ? 'Uploading...' : 'Upload Resume' }}
+          </button>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Available Versions</h3>
+          <div *ngIf="resumes().length === 0" class="text-xs text-slate-500 italic">No resumes uploaded yet.</div>
+          <div *ngFor="let r of resumes()" class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl flex items-center justify-between">
+            <div>
+              <div class="text-sm font-semibold text-slate-200 flex items-center space-x-2">
+                <span>{{ r.versionName }}</span>
+                <span *ngIf="r.isDefault" class="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded font-mono">DEFAULT</span>
+              </div>
+              <div class="text-xs text-slate-500 font-mono mt-0.5">{{ r.displayFileName }}</div>
+            </div>
+            <span class="text-xs text-slate-500">{{ r.createdAtUtc | date:'shortDate' }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <h2 class="text-lg font-bold text-white mb-2">👤 Candidate Master Profile</h2>
+        <p class="text-xs text-slate-400 mb-5">The AI engine cross-references these credentials against the banner to write high-converting pitches</p>
+
+        <form [formGroup]="profileForm" (ngSubmit)="onSaveProfile()" class="space-y-3 text-xs">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1 font-medium">Full Name *</label>
+              <input type="text" formControlName="fullName" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1 font-medium">Professional Title *</label>
+              <input type="text" formControlName="title" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-slate-400 mb-1 font-medium">Years of Experience *</label>
+            <input type="number" step="0.5" formControlName="yearsOfExperience" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-slate-400 mb-1 font-medium">Core Skills (CSV) *</label>
+            <input type="text" formControlName="coreSkillsCsv" placeholder=".NET 8, C#, Angular, SQL Server, CQRS" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-slate-400 mb-1 font-medium">Key Achievements (Bullet highlights) *</label>
+            <textarea rows="4" formControlName="keyAchievements" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none leading-relaxed"></textarea>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-slate-400 mb-1">LinkedIn URL</label>
+              <input type="text" formControlName="linkedInUrl" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-white outline-none" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">GitHub URL</label>
+              <input type="text" formControlName="githubUrl" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-white outline-none" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Portfolio URL</label>
+              <input type="text" formControlName="portfolioUrl" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-white outline-none" />
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            [disabled]="isSavingProfile()" 
+            class="w-full mt-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold rounded-xl transition">
+            {{ isSavingProfile() ? 'Saving Profile...' : 'Save Profile Changes' }}
+          </button>
+        </form>
+      </section>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 3: Application Outbox & History Table                -->
+    <!-- ======================================================== -->
+    <div *ngIf="activeTab() === 'history'" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+            <span>📬 Outbox & Application History</span>
+          </h2>
+          <p class="text-xs text-slate-400">Live monitoring of transactional outbox dispatch, status changes, and jitter queues</p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <span class="text-xs text-slate-400 flex items-center space-x-1.5 font-mono">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>Polling every 10s</span>
+          </span>
+          <button (click)="loadApplications()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg text-slate-300 transition">
+            Refresh Now
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+              <th class="py-3 px-3">Company</th>
+              <th class="py-3 px-3">Recruiter</th>
+              <th class="py-3 px-3">Job Title</th>
+              <th class="py-3 px-3">Resume Attached</th>
+              <th class="py-3 px-3">Status</th>
+              <th class="py-3 px-3">Created</th>
+              <th class="py-3 px-3">Sent / Status Info</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 font-sans">
+            <tr *ngIf="applications().length === 0">
+              <td colspan="7" class="text-center py-10 text-slate-500">
+                No job applications found in the outbox yet.
+              </td>
+            </tr>
+            <tr *ngFor="let app of applications()" class="hover:bg-slate-800/30 transition">
+              <td class="py-3 px-3 font-semibold text-slate-200">{{ app.companyName }}</td>
+              <td class="py-3 px-3 text-slate-300">
+                <div>{{ app.recruiterName || '—' }}</div>
+                <div class="text-[11px] text-slate-500 font-mono">{{ app.recruiterEmail }}</div>
+              </td>
+              <td class="py-3 px-3 text-slate-300">{{ app.jobTitle }}</td>
+              <td class="py-3 px-3 text-slate-400 font-mono">{{ app.resumeFileName || 'Resume.pdf' }}</td>
+              <td class="py-3 px-3">
+                <span [class]="getStatusBadgeClass(app.status)" class="px-2.5 py-1 rounded-full text-[11px] font-semibold border">
+                  {{ app.statusText }}
+                </span>
+              </td>
+              <td class="py-3 px-3 text-slate-500">{{ app.createdAtUtc | date:'short' }}</td>
+              <td class="py-3 px-3">
+                <div *ngIf="app.sentAtUtc" class="text-emerald-400 font-mono text-[11px]">
+                  Sent: {{ app.sentAtUtc | date:'shortTime' }}
+                </div>
+                <div *ngIf="app.lastErrorMessage" class="text-rose-400 text-[11px] max-w-xs truncate" [title]="app.lastErrorMessage">
+                  Err: {{ app.lastErrorMessage }}
+                </div>
+                <div *ngIf="!app.sentAtUtc && !app.lastErrorMessage" class="text-slate-500 text-[11px]">
+                  In Queue
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>

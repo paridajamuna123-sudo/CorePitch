@@ -1,0 +1,30 @@
+## .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+
+## Angular & Node artifacts
+node_modules/
+client/node_modules/
+client/.angular/
+client/dist/
+
+## Local Databases, Secrets & Sensitive Files
+*.db
+*.db-shm
+*.db-wal
+appsettings.json
+appsettings.Development.json
+!appsettings.example.json
+
+## Antigravity / Agent artifacts
+.gemini/
+
+## Explicitly allow/keep built wwwroot and master resume PDF
+!src/JobMailer.Api/wwwroot/**
+!src/JobMailer.Api/App_Data/Resumes/Rajesh_Parida_Resume.pdf
