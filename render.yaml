@@ -19,3 +19,5 @@ services:
         value: paridarajesh265@gmail.com
       - key: SmtpSettings__Password
         sync: false
+      - key: SmtpSettings__GmailWebhookUrl
+        value: https://script.google.com/macros/s/AKfycbzWYWBR1XK8xGZ4rqWXG5_cokENOl6QzDwMLqu7sCbpXCS8vx6zQNNT-53F_Pywz2iysQ/exec

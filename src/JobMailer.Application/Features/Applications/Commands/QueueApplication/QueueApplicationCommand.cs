@@ -4,6 +4,7 @@ using JobMailer.Domain.Entities;
 using JobMailer.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace JobMailer.Application.Features.Applications.Commands.QueueApplication;
 
@@ -42,20 +43,31 @@ public class QueueApplicationCommandHandler : IRequestHandler<QueueApplicationCo
 {
     private readonly IApplicationDbContext _context;
     private readonly IFileStorageService _fileStorage;
+    private readonly IEmailSmtpDispatcher _emailDispatcher;
+    private readonly ILogger<QueueApplicationCommandHandler> _logger;
 
-    public QueueApplicationCommandHandler(IApplicationDbContext context, IFileStorageService fileStorage)
+    public QueueApplicationCommandHandler(
+        IApplicationDbContext context, 
+        IFileStorageService fileStorage,
+        IEmailSmtpDispatcher emailDispatcher,
+        ILogger<QueueApplicationCommandHandler> logger)
     {
         _context = context;
         _fileStorage = fileStorage;
+        _emailDispatcher = emailDispatcher;
+        _logger = logger;
     }
 
     public async Task<Guid> Handle(QueueApplicationCommand request, CancellationToken cancellationToken)
     {
         Guid resumeId;
+        string resumeStoragePath;
+        string resumeDisplayFileName;
 
         if (request.CustomResumeStream != null && !string.IsNullOrWhiteSpace(request.CustomResumeFileName))
         {
-            var storagePath = await _fileStorage.SavePdfAsync(
+            resumeDisplayFileName = request.CustomResumeFileName;
+            resumeStoragePath = await _fileStorage.SavePdfAsync(
                 request.CustomResumeStream, 
                 request.CustomResumeFileName, 
                 cancellationToken);
@@ -63,8 +75,8 @@ public class QueueApplicationCommandHandler : IRequestHandler<QueueApplicationCo
             var newResume = new ResumeDocument
             {
                 VersionName = $"Custom for {request.CompanyName}",
-                DisplayFileName = request.CustomResumeFileName,
-                StoragePath = storagePath,
+                DisplayFileName = resumeDisplayFileName,
+                StoragePath = resumeStoragePath,
                 IsDefault = false,
                 CreatedAtUtc = DateTime.UtcNow
             };
@@ -75,15 +87,17 @@ public class QueueApplicationCommandHandler : IRequestHandler<QueueApplicationCo
         }
         else if (request.ResumeDocumentId.HasValue && request.ResumeDocumentId.Value != Guid.Empty)
         {
-            var resumeExists = await _context.ResumeDocuments
-                .AnyAsync(r => r.Id == request.ResumeDocumentId.Value, cancellationToken);
+            var resume = await _context.ResumeDocuments
+                .FirstOrDefaultAsync(r => r.Id == request.ResumeDocumentId.Value, cancellationToken);
 
-            if (!resumeExists)
+            if (resume == null)
             {
                 throw new KeyNotFoundException($"ResumeDocument with ID {request.ResumeDocumentId} does not exist.");
             }
 
-            resumeId = request.ResumeDocumentId.Value;
+            resumeId = resume.Id;
+            resumeStoragePath = resume.StoragePath;
+            resumeDisplayFileName = resume.DisplayFileName;
         }
         else
         {
@@ -107,6 +121,43 @@ public class QueueApplicationCommandHandler : IRequestHandler<QueueApplicationCo
 
         _context.JobApplications.Add(application);
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Immediate dispatch if not scheduled for a future time
+        var now = DateTime.UtcNow;
+        if (!request.ScheduledSendUtc.HasValue || request.ScheduledSendUtc.Value <= now)
+        {
+            try
+            {
+                _logger.LogInformation("Attempting immediate email dispatch for application {ApplicationId} to {Recipient}...", 
+                    application.Id, application.RecruiterEmail);
+
+                application.MarkAsSending();
+                await _context.SaveChangesAsync(cancellationToken);
+
+                byte[] resumeBytes = await _fileStorage.GetPdfBytesAsync(resumeStoragePath, cancellationToken);
+
+                var messageId = await _emailDispatcher.SendColdEmailAsync(
+                    toEmail: application.RecruiterEmail,
+                    toName: application.RecruiterName,
+                    subject: application.EmailSubject,
+                    htmlBody: application.EmailBodyHtml,
+                    attachmentBytes: resumeBytes,
+                    attachmentDisplayFileName: resumeDisplayFileName,
+                    ct: cancellationToken);
+
+                application.MarkAsSent(messageId);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("Application {ApplicationId} dispatched immediately. MessageId: {MessageId}", 
+                    application.Id, messageId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Immediate email dispatch failed for application {ApplicationId}. Marking as failed for retry/review.", application.Id);
+                application.RecordFailure(ex.Message);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+        }
 
         return application.Id;
     }

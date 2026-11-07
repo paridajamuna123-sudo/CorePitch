@@ -9,4 +9,5 @@ public class SmtpSettings
     public string SenderEmail { get; set; } = string.Empty;
     public string SenderDisplayName { get; set; } = "JobMailer";
     public string AppPassword { get; set; } = string.Empty;
+    public string? GmailWebhookUrl { get; set; }
 }
